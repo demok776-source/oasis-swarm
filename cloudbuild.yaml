@@ -1,0 +1,40 @@
+steps:
+  # Step 1: Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t',
+      'europe-west1-docker.pkg.dev/project-f537c014-8ae2-4195-9f3/app-tier-repo/app-image:$COMMIT_SHA',
+      './app-tier'
+    ]
+
+  # Step 2: Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'push',
+      'europe-west1-docker.pkg.dev/project-f537c014-8ae2-4195-9f3/app-tier-repo/app-image:$COMMIT_SHA'
+    ]
+
+  # Step 3: Deploy container image to Google Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args: [
+      'run',
+      'deploy',
+      'app-tier',
+      '--image',
+      'europe-west1-docker.pkg.dev/project-f537c014-8ae2-4195-9f3/app-tier-repo/app-image:$COMMIT_SHA',
+      '--region',
+      'europe-west1',
+      '--service-account',
+      'app-tier@project-f537c014-8ae2-4195-9f3.iam.gserviceaccount.com',
+      '--set-env-vars',
+      'DB_HOST=10.0.0.4,DB_PORT=5432,DB_NAME=oasis_db,DB_USER=oasis_admin,REDIS_HOST=oasis-sync,QDRANT_URL=http://qdrant:6333',
+      '--allow-unauthenticated'
+    ]
+
+images:
+  - 'europe-west1-docker.pkg.dev/project-f537c014-8ae2-4195-9f3/app-tier-repo/app-image:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

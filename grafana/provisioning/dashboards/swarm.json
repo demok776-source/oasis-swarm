@@ -1,0 +1,36 @@
+{
+  "title": "OASIS: Swarm Telemetrics",
+  "timezone": "browser",
+  "refresh": "5s",
+  "panels": [
+    {
+      "title": "Active Drone Cluster Count",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) FROM pg_stat_activity",
+          "refId": "A",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "title": "Kafka Message Ingestion Rate (Simulated)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 0 },
+      "targets": [
+        {
+          "rawSql": "SELECT extract(epoch from now()) as time, floor(random() * 1000 + 500) as metric",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ]
+    }
+  ]
+}

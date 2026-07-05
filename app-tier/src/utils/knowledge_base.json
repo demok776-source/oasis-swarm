@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "module": "AEROSPACE_DIV",
+    "text": "The Aerospace Division module orchestrates autonomous drone navigation, MavLink autopilot integration, A* pathfinding, and finite state machine (FSM) telemetry synchronization."
+  },
+  {
+    "id": 2,
+    "module": "NOTE_BOARD",
+    "text": "The Note Board is a real-time UI dashboard visualizer that updates modular metrics, system state, and captures user telemetry directly through the Sync Layer."
+  },
+  {
+    "id": 3,
+    "module": "SYNC_LAYER",
+    "text": "The Sync Layer operates as a unified event bus. It features a background daemon-thread listener running patterns on 'oasis:channel:*', automatically falling back to SQLite database queue polling when Redis is offline."
+  },
+  {
+    "id": 4,
+    "module": "JARVIS_AI",
+    "text": "JARVIS AI is the central planning and vector RAG memory layer of the ecosystem. It queries Qdrant database collections or runs semantic local cosine similarity searches using mock embeddings."
+  },
+  {
+    "id": 5,
+    "module": "ENGINEERING_CORE",
+    "text": "The Engineering Core module manages physical hydraulics simulations, Simulink models, and telemetry streaming of hydraulic pressure and flow rates."
+  },
+  {
+    "id": 6,
+    "module": "OASIS_PRIME",
+    "text": "OASIS PRIME is the core roguelite game engine built with Unity ECS architecture, registering players, enemy movement, looting, and bridge synchronization."
+  }
+]

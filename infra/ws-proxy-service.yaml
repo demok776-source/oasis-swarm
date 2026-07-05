@@ -1,0 +1,30 @@
+# Cloud Run WebSocket proxy service
+# Deploy with: gcloud run services replace ws-proxy-service.yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ws-proxy
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "3"
+    spec:
+      serviceAccountName: app-tier@PROJECT_ID.iam.gserviceaccount.com
+      containers:
+        - image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: nginx-ws-config
+---
+# nginx WebSocket config (mount as ConfigMap or bake into image)
+# /etc/nginx/conf.d/ws.conf

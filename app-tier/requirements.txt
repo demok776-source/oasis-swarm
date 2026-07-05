@@ -1,0 +1,17 @@
+fastapi==0.103.1
+uvicorn[standard]==0.23.2
+sqlalchemy==2.0.20
+psycopg2-binary==2.9.7
+redis==5.0.0
+qdrant-client==1.5.4
+pydantic[email]==2.3.0
+gunicorn==21.2.0
+python-multipart==0.0.6
+alembic==1.18.5
+httpx
+langchain-core
+langchain-community
+langchain-ollama
+langgraph
+pytest
+kafka-python==2.0.2

@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --color-void: #020206;
+  --color-deep: #050512;
+  --color-sx-cyan: #00a2e8;
+  --color-nv-green: #76b900;
+  --color-ts-red: #cc0000;
+  --color-oa-purple: #7422f2;
+}
+
+:root {
+  --void: #020206;
+  --deep: #050512;
+  --surface: rgba(8,8,24,0.65);
+  --b0: rgba(255,255,255,0.03);
+  --b1: rgba(255,255,255,0.08);
+  --b2: rgba(255,255,255,0.15);
+  --p0: #4f46e5;
+  --p1: #6366f1;
+  --p2: #818cf8;
+  --p3: #4f46e5;
+  --p4: #a5b4fc;
+  --nv-green: #76b900;
+  --sx-cyan: #00a2e8;
+  --ts-red: #cc0000;
+  --oa-purple: #7422f2;
+  --white: #f8fafc;
+  --off: #cbd5e1;
+  --text: #94a3b8;
+  --muted: #475569;
+  --ease: cubic-bezier(0.16,1,0.3,1);
+}
+
+body {
+  background-color: var(--void);
+  color: var(--text);
+  cursor: none;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(99,102,241,.015) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+::selection {
+  background: rgba(99,102,241,.35);
+  color: var(--white);
+}
+
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: .15;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
