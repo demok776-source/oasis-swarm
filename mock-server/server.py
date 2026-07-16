@@ -11,10 +11,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configurations
+# Previously allow_origins=["*"] with allow_credentials=True -- browsers
+# reject that combination outright per the Fetch spec (same bug fixed in
+# app-tier/src/main.py). Dev-only server, so a permissive-but-valid list.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -37,4 +39,4 @@ else:
 
 if __name__ == "__main__":
     print("[OASIS SYSTEM CORE] Starting local development server mock...")
-    uvicorn.run("server:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)

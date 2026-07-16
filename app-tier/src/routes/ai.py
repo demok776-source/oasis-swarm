@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 import os
 import json
 from src.utils.logger import get_logger
+from src.security import limiter, require_api_key
 
 from langchain_core.messages import HumanMessage, SystemMessage
 logger = get_logger("ai_route")
@@ -38,8 +39,9 @@ llm = ChatOllama(
 
 
 
-@router.post("/query")
-def process_query(query: AIQuery):
+@router.post("/query", dependencies=[Depends(require_api_key)])
+@limiter.limit("30/minute")
+def process_query(request: Request, query: AIQuery):
     logger.info(f"Swarm Triage received query from {query.module}: {query.query}")
     
     # Triage Agent Logic (Real LLM Routing)

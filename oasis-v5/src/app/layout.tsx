@@ -1,17 +1,15 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+// Self-hosted fonts (@fontsource) instead of next/font/google: next/font/google
+// fetches font files from fonts.googleapis.com at *build* time, which breaks
+// builds in network-restricted CI/offline environments. @fontsource ships the
+// woff2 files in the npm package itself, so the build has zero external
+// network dependency. Font-family names are unchanged ("Space Grotesk" /
+// "JetBrains Mono"), so the --font-sans / --font-mono tokens in globals.css
+// still resolve correctly — nothing else needs to change.
+import "@fontsource/space-grotesk/latin.css";
+import "@fontsource/jetbrains-mono/latin.css";
 import "./globals.css";
 import CustomCursor from "@/components/layout/CustomCursor";
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "OASIS SYSTEM CORE v∞",
@@ -25,9 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <div className="noise-overlay" />
         <CustomCursor />
         {children}

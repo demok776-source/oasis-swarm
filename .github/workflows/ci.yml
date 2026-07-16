@@ -9,6 +9,16 @@ on:
 jobs:
   test-backend:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.11
@@ -20,10 +30,12 @@ jobs:
         cd app-tier
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest
     - name: Run Backend Tests
+      env:
+        USE_SQLITE: "true"
+        REDIS_HOST: "127.0.0.1"
       run: |
-        pytest tests/test_mock_system.py
+        pytest tests/test_mock_system.py app-tier/tests/ --timeout=60 --timeout-method=thread -v
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -43,3 +55,16 @@ jobs:
       run: |
         cd oasis-v5
         npm run build
+
+  build-rust-gateway:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install system deps for rdkafka (cmake-build feature)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends cmake libssl-dev
+    - name: Check rust-gateway compiles
+      run: |
+        cd rust-gateway
+        cargo check --release

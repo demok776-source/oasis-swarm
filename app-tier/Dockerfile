@@ -21,6 +21,11 @@ RUN pip install uv && uv pip install --system -r requirements.txt
 COPY gunicorn_conf.py .
 COPY src/ ./src/
 
+# Previously ran as root (the image's default) -- a container escape or
+# dependency RCE would have full root inside the container for no reason.
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
 EXPOSE 8080
 
 CMD ["gunicorn", "-c", "gunicorn_conf.py", "src.main:app"]

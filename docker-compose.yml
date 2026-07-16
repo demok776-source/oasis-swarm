@@ -7,6 +7,11 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - oasis-net
 
@@ -16,6 +21,11 @@ services:
       - "6333:6333"
     volumes:
       - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:6333/collections || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - oasis-net
 
@@ -27,6 +37,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-oasis_admin}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - oasis-net
 
@@ -35,13 +50,19 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep imok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - oasis-net
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     ports:
       - "9092:9092"
     environment:
@@ -51,9 +72,21 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
     networks:
       - oasis-net
 
+  # NOTE ON depends_on BELOW: previously every service used the bare form
+  # (`depends_on: [redis, postgres, ...]`), which only waits for the
+  # dependency's container to *start*, not for it to actually be ready to
+  # accept connections (Postgres in particular can take several seconds
+  # after container-start before it accepts connections). app-tier could
+  # boot and immediately fail its first DB query. `condition:
+  # service_healthy` (paired with the healthchecks above) fixes that.
   app-tier:
     build:
       context: ./app-tier
@@ -63,10 +96,27 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-      - qdrant
-      - postgres
-      - kafka
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - oasis-net
+
+  telemetry-worker:
+    build:
+      context: ./app-tier
+      dockerfile: Dockerfile
+    command: ["python", "-m", "src.workers.telemetry_processor"]
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - oasis-net
 
@@ -81,7 +131,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - oasis-net
 
@@ -111,9 +162,14 @@ services:
     image: grafana/grafana:latest
     ports:
       - "3001:3000"
+    env_file:
+      - .env
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - oasis-net
 
@@ -121,6 +177,8 @@ services:
     build:
       context: ./crypto-bot
       dockerfile: Dockerfile
+    env_file:
+      - .env
     depends_on:
       - app-tier
     networks:
@@ -132,6 +190,16 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8765:8765"
+    networks:
+      - oasis-net
+
+  rust-gateway:
+    build:
+      context: ./rust-gateway
+      dockerfile: Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
     networks:
       - oasis-net
 

@@ -28,7 +28,10 @@ async def physics_simulator():
         }
         
         message = json.dumps(payload)
-        for client in connected_clients:
+        # Iterate over a snapshot: `handler()` can remove a client from
+        # `connected_clients` concurrently on disconnect, which raises
+        # "Set changed size during iteration" if we iterate the live set.
+        for client in list(connected_clients):
             try:
                 await client.send(message)
             except websockets.exceptions.ConnectionClosed:
@@ -39,8 +42,32 @@ async def handler(websocket):
     connected_clients.add(websocket)
     try:
         async for message in websocket:
-            data = json.loads(message)
-            # Route client messages if needed
+            try:
+                data = json.loads(message)
+            except json.JSONDecodeError:
+                logger.warning("Received non-JSON frame, ignoring.")
+                continue
+
+            if data.get("type") == "AGENT_TRANSFORMS":
+                # Sent by OASIS PRIME's UsdSyncBridge.cs -- merge into shared
+                # state and fan out to every OTHER connected client (e.g. a
+                # monitoring dashboard) so the digital twin actually updates
+                # for observers, not just for whoever sent it.
+                swarm_state["agents"] = data.get("agents", [])
+                rebroadcast = json.dumps({
+                    "type": "AGENT_TRANSFORMS_SYNC",
+                    "time": swarm_state["time"],
+                    "agents": swarm_state["agents"],
+                })
+                for client in list(connected_clients):
+                    if client is websocket:
+                        continue
+                    try:
+                        await client.send(rebroadcast)
+                    except websockets.exceptions.ConnectionClosed:
+                        pass
+            else:
+                logger.info(f"Received unrecognized frame type: {data.get('type')}")
     except websockets.exceptions.ConnectionClosed:
         logger.info("Client disconnected.")
     finally:

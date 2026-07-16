@@ -4,12 +4,13 @@
   "refresh": "5s",
   "panels": [
     {
-      "title": "Active Drone Cluster Count",
+      "title": "Distinct Modules Reporting (last 5 min)",
       "type": "stat",
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "description": "Real query against sync_events_history -- previously this panel was labeled \"Active Drone Cluster Count\" but ran `SELECT COUNT(*) FROM pg_stat_activity`, which is Postgres's own internal connection count and has nothing to do with drones.",
       "targets": [
         {
-          "rawSql": "SELECT COUNT(*) FROM pg_stat_activity",
+          "rawSql": "SELECT COUNT(DISTINCT module) FROM sync_events_history WHERE created_at > now() - interval '5 minutes'",
           "refId": "A",
           "format": "table"
         }
@@ -21,12 +22,37 @@
       }
     },
     {
-      "title": "Kafka Message Ingestion Rate (Simulated)",
+      "title": "Sync Event Ingestion Rate (per minute)",
       "type": "timeseries",
       "gridPos": { "h": 8, "w": 16, "x": 8, "y": 0 },
+      "description": "Real event throughput from sync_events_history, bucketed per minute. Previously labeled \"Kafka Message Ingestion Rate (Simulated)\" and literally returned `random() * 1000 + 500` -- fake data with no connection to real Kafka/DB activity. This is real Sync Layer traffic (DRONE_TELEMETRY_UPDATE, module publishes, etc.) -- true Kafka broker throughput (rust-gateway -> telemetry.physical, sync.py -> telemetry.aerospace) isn't visible from Postgres at all and needs a Kafka JMX/Prometheus exporter (see report: this is real future work, not faked here).",
       "targets": [
         {
-          "rawSql": "SELECT extract(epoch from now()) as time, floor(random() * 1000 + 500) as metric",
+          "rawSql": "SELECT date_trunc('minute', created_at) AS time, COUNT(*) AS metric FROM sync_events_history WHERE created_at > now() - interval '1 hour' GROUP BY 1 ORDER BY 1",
+          "refId": "A",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "title": "Events by Module (last hour)",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "rawSql": "SELECT module, COUNT(*) AS metric FROM sync_events_history WHERE created_at > now() - interval '1 hour' GROUP BY module ORDER BY metric DESC",
+          "refId": "A",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "title": "DRONE_TELEMETRY_UPDATE Events (last hour)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "rawSql": "SELECT date_trunc('minute', created_at) AS time, COUNT(*) AS metric FROM sync_events_history WHERE event = 'DRONE_TELEMETRY_UPDATE' AND created_at > now() - interval '1 hour' GROUP BY 1 ORDER BY 1",
           "refId": "A",
           "format": "time_series"
         }

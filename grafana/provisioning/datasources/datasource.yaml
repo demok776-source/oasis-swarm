@@ -5,10 +5,16 @@ datasources:
     type: postgres
     access: proxy
     url: postgres:5432
-    user: admin
+    # Previously hardcoded to user "admin" / password "password123" -- a
+    # real committed credential that also didn't even match the actual
+    # DB_USER/DB_PASS used everywhere else (see .env.example). Grafana
+    # supports ${VAR} substitution in provisioning files since v9; these
+    # read from the same .env the rest of the stack uses.
+    user: ${DB_USER}
     secureJsonData:
-      password: "password123"
+      password: ${DB_PASS}
     jsonData:
+      database: ${DB_NAME}
       sslmode: 'disable'
-      postgresVersion: 15
+      postgresVersion: 1500
     isDefault: true

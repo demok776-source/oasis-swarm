@@ -1,5 +1,16 @@
 # Cloud Run WebSocket proxy service
+#
+# Build + push first:
+#   docker build -t europe-west1-docker.pkg.dev/PROJECT_ID/app-tier-repo/ws-proxy:latest infra/ws-proxy/
+#   docker push europe-west1-docker.pkg.dev/PROJECT_ID/app-tier-repo/ws-proxy:latest
+#
 # Deploy with: gcloud run services replace ws-proxy-service.yaml
+#
+# NOTE: previously this file mounted the nginx config via a Kubernetes
+# ConfigMap volume, which Cloud Run does not support at all (Cloud Run has no
+# ConfigMap equivalent -- see Google's own Kubernetes-to-Cloud-Run migration
+# docs). `gcloud run services replace` would have rejected this outright.
+# The config is now baked into the image at infra/ws-proxy/Dockerfile instead.
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
@@ -15,16 +26,6 @@ spec:
     spec:
       serviceAccountName: app-tier@PROJECT_ID.iam.gserviceaccount.com
       containers:
-        - image: nginx:alpine
+        - image: europe-west1-docker.pkg.dev/PROJECT_ID/app-tier-repo/ws-proxy:latest
           ports:
             - containerPort: 80
-          volumeMounts:
-            - name: nginx-conf
-              mountPath: /etc/nginx/conf.d
-      volumes:
-        - name: nginx-conf
-          configMap:
-            name: nginx-ws-config
----
-# nginx WebSocket config (mount as ConfigMap or bake into image)
-# /etc/nginx/conf.d/ws.conf

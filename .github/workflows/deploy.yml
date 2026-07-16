@@ -1,6 +1,11 @@
 name: OASIS Deploy
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'infra/terraform/**'
   push:
     branches:
       - main
@@ -10,8 +15,67 @@ env:
   REGION: europe-west1
 
 jobs:
-  deploy:
+  # Runs on every PR that touches Terraform. Produces a plan and posts it as
+  # a PR comment so changes are reviewable *before* they can ever reach the
+  # apply job below.
+  terraform-plan:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Terraform Init
+        run: |
+          cd infra/terraform
+          terraform init
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          cd infra/terraform
+          terraform plan -no-color -out=tfplan | tee plan_output.txt
+        continue-on-error: true
+
+      - name: Post plan to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infra/terraform/plan_output.txt', 'utf8').slice(-60000);
+            const body = `#### Terraform Plan\n<details><summary>Show plan</summary>\n\n\`\`\`\n${plan}\n\`\`\`\n</details>`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+      - name: Fail if plan errored
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+  # Runs on push to main. Gated by the `production` GitHub Environment —
+  # configure required reviewers for that environment in
+  # Settings -> Environments -> production. Until someone approves the run,
+  # `terraform apply` never executes. This replaces the previous
+  # `terraform apply -auto-approve` on every push to main, which had zero
+  # human review gate before touching real GCP infra (Cloud SQL, VMs, etc.).
+  terraform-apply:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -29,6 +93,14 @@ jobs:
           cd infra/terraform
           terraform init
           terraform apply -auto-approve
+
+  build-frontend:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Setup Node for Frontend
         uses: actions/setup-node@v4
